@@ -23,10 +23,10 @@ from email.mime.base import MIMEBase
 from email import encoders
 
 
-EmailConfig = "%s/../config/email.ini" % sys.path[0]
+EmailConfig = "%s/config/email.ini" % "/".join(__file__.split('/')[:-2])
 ConfigSec = "DEFAULT"
 
-def sendEmail(addresses, content, mail_title, attach):
+def sendEmail(addresses, content, mail_title, attach, cc=[]):
     """
 
     :param addresses: To list
@@ -53,6 +53,7 @@ def sendEmail(addresses, content, mail_title, attach):
     msg["Subject"] = Header(mail_title, 'utf-8')
     msg["From"] = fromaddress
     msg["To"] = ";".join(addresses)
+    msg["Cc"] = ";".join(cc)
     msg.attach(MIMEText(mail_content, 'html', 'utf-8'))
     # msgtext = MIMEText("<font color=red> 官网业务周平均延时图表 :<br><img src=\"cid:weekly\"border=\"1\"><br> 详细内容见附件。</font>",
     #                    "html", "utf-8")
@@ -60,10 +61,11 @@ def sendEmail(addresses, content, mail_title, attach):
     # attach
     for f in attach:
         try:
-            mime = mimetypes.guess_type(f)[0].split("/")
+            mime = mimetypes.guess_type(f['filepath'])[0].split("/")
             attachfile = MIMEBase(mime[0], mime[1])
-            attachfile.set_payload(open(f, 'rb').read())
-            name = basename(f)
+            attachfile.set_payload(open(f['filepath'], 'rb').read())
+            # name = basename(f)
+            name = f['filename']
             attachfile.add_header('Content-Disposition', 'attachment', filename=('utf-8', '', name))  # 扩展标题设置
             encoders.encode_base64(attachfile)
             msg.attach(attachfile)
@@ -112,7 +114,13 @@ if __name__ == '__main__':
     Subject = 'Python自动发送的邮件'  # 邮件标题
     content = "您好，这是使用python登录邮箱发送邮件的测试"
     attach = [
-        "/Users/madgd/Downloads/test3/test.xlsx",
-        "/Users/madgd/Downloads/test3/testdoc.docx"
+        {
+            "filename": 'test.xlsx',
+            "filepath": "/Users/madgd/Downloads/test3/test.xlsx",
+        },
+        {
+            "filename": 'testdoc.docx',
+            "filepath": "/Users/madgd/Downloads/test3/testdoc.docx",
+        },
     ]
     sendEmail(addresses, content, Subject, attach)

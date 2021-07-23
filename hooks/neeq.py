@@ -163,12 +163,15 @@ def parse_contacts(file):
     next(allRows) # skip header
     for row in allRows:
         name = row[0].value
-        type = row[1].value
+        raw_type = row[1].value
+        type = "client"
         target_table = "client"
-        if type == "券商":
+        if raw_type == "券商":
             target_table = "client_group"
-        elif type == "监管员":
+            type = "client_group"
+        elif raw_type == "监管员":
             target_table = "staff"
+            type = "staff"
 
         belong = row[2].value
         position = row[3].value

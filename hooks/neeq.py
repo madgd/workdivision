@@ -162,29 +162,58 @@ def parse_contacts(file):
     allRows = sheet1.rows
     next(allRows) # skip header
     for row in allRows:
-        name = row[0].value
-        raw_type = row[1].value
-        type = "client"
-        target_table = "client"
-        if raw_type == "券商":
-            target_table = "client_group"
-            type = "client_group"
-        elif raw_type == "监管员":
-            target_table = "staff"
-            type = "staff"
+        print(row[0].value)
+        name = row[3].value
+        if not name:
+            continue
+        client_group_name = row[0].value
+        client_group_fullname = row[1].value
+        staff_name = row[2].value
 
-        belong = row[2].value
-        position = row[3].value
-        phone = row[4].value
-        tele = row[5].value
-        email = row[6].value
-        wechat = row[7].value
-        prime = row[8].value
+        # raw_type = row[1].value
+        type = "client_group"
+        target_table = "client_group"
+        # if raw_type == "券商":
+        #     target_table = "client_group"
+        #     type = "client_group"
+        # elif raw_type == "监管员":
+        #     target_table = "staff"
+        #     type = "staff"
+
+        position = row[4].value
+        email = row[5].value
+        phone = row[6].value
+        tele = row[7].value
+        wechat = row[8].value
+        prime = 1
+        # in case of duplicate names
+        c.execute("insert or replace into contacts (id, name, type, related_id, position, prime,\
+                    phone, tele, email, wechat) values (\
+                    (select id from contacts where name = ? and related_id = (select id from client_group where name = ? and staff_name = ?)), ?, ?,\
+                    (select id from client_group where name = ? and staff_name = ?), ?, ?, ?, ?, ?, ?)",
+                  (name, client_group_name, staff_name, name, type, client_group_name, staff_name, position, prime,\
+                   phone, tele, email, wechat)
+                 )
+        res = conn.commit()
+
+    # sheet2
+    sheet2 = wb["监管员联系方式"]
+    allRows = sheet2.rows
+    next(allRows) # skip header
+    for row in allRows:
+        name = row[0].value
+        phone = row[1].value
+        tele = row[2].value
+        email = row[3].value
+        wechat = row[4].value
+        prime = 1
+        position = ""
+        type = "staff"
         c.execute("insert or replace into contacts (id, name, type, related_id, position, prime,\
                     phone, tele, email, wechat) values (\
                     (select id from contacts where name = ?), ?, ?,\
-                    (select id from " + target_table + " where name = ?), ?, ?, ?, ?, ?, ?)",
-                  (name, name, type, belong, position, prime,\
+                    (select id from staff where name = ?), ?, ?, ?, ?, ?, ?)",
+                  (name, name, type, name, position, prime,\
                    phone, tele, email, wechat)
                  )
         conn.commit()

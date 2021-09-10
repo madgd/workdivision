@@ -58,4 +58,4 @@ if __name__ == '__main__':
     file_pre = "基本岗分工表"
     hook = "neeq"
     # batch_update(file_path, file_pre, hook)
-    batch_update_contacts(file_path, "券商联系人", hook)
+    batch_update_contacts(file_path, "", hook)

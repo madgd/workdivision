@@ -57,6 +57,87 @@ def decodeAttachName(raw):
         pass
     return unquote(name)
 
+class EmailSender:
+    """
+
+    """
+    smtp = None
+    def __init__(self):
+        # config
+        config = configparser.ConfigParser()
+        config.read(EmailConfig)
+        self.host_server = config.get(ConfigSec, "host_server")
+        self.fromaddress = config.get(ConfigSec, "fromaddress")
+        password = config.get(ConfigSec, "password")
+        self.inport = config.get(ConfigSec, "inport")
+        try:
+            self.smtp = SMTP_SSL(self.host_server)
+            self.smtp.set_debuglevel(0)
+            self.smtp.ehlo(self.host_server)
+            self.smtp.login(self.fromaddress, password)
+        except Exception as e:
+            print("[emailops][email sender init failed][tm=%s]e:%s" % (f"{datetime.datetime.now():%Y-%m-%d %H:%M:%S}", e))
+
+    def sendEmail(self, addresses, content, mail_title, attach, cc=[]):
+        """
+
+        :param addresses: To list
+        :param content:
+        :param mail_title:
+        :param attach: attach file list
+        :return:
+        """
+
+        # email content
+        mail_content = content
+        msg = MIMEMultipart()
+        msg["Subject"] = Header(mail_title, 'utf-8')
+        msg.attach(MIMEText(mail_content, 'plain', 'utf-8'))
+        msg = MIMEMultipart()
+        msg["Subject"] = Header(mail_title, 'utf-8')
+        msg["From"] = self.fromaddress
+        msg["To"] = ",".join(addresses)
+        msg["Cc"] = ",".join(cc)
+        msg.attach(MIMEText(mail_content, 'html', 'utf-8'))
+        # log
+        attach_names = ";".join([a["filename"] for a in attach])
+        print("[emailops][try send email][tm=%s]host:%s, port:%s, from:%s, to:%s, cc:%s, Subject:%s, attach:%s"
+              % (f"{datetime.datetime.now():%Y-%m-%d %H:%M:%S}", self.host_server, self.inport, self.fromaddress, msg["To"], msg["Cc"], msg["Subject"],
+                 attach_names)
+              )
+
+        # attach
+        for f in attach:
+            try:
+                mime = mimetypes.guess_type(f['filepath'])[0].split("/")
+                attachfile = MIMEBase(mime[0], mime[1])
+                attachfile.set_payload(open(f['filepath'], 'rb').read())
+                name = f['filename']
+                attachfile.add_header('Content-Disposition', 'attachment', filename=Header(name, 'utf-8').encode())
+                encoders.encode_base64(attachfile)
+                msg.attach(attachfile)
+            except Exception as e:
+                print("[emailops][attach failed][tm=%s]e:%s" % (f"{datetime.datetime.now():%Y-%m-%d %H:%M:%S}", e))
+
+        # send
+        retry = 0
+        while retry < 3:
+            try:
+                self.smtp.sendmail(self.fromaddress, addresses + cc, msg.as_string())
+                print("[emailops][email sent][tm=%s][retry=%d]host:%s, port:%s, from:%s, to:%s, cc:%s, subject:%s, attach:%s"
+                  % (f"{datetime.datetime.now():%Y-%m-%d %H:%M:%S}", retry, self.host_server, self.inport, self.fromaddress, msg["to"], msg["cc"], msg["subject"],
+                     attach_names)
+                  )
+                break
+            except Exception as e:
+                print("[emailops][email send failed][tm=%s][retry=%d]host:%s, port:%s, from:%s, to:%s, cc:%s, subject:%s, attach:%s, err:"
+                  % (f"{datetime.datetime.now():%Y-%m-%d %H:%M:%S}", retry,  self.host_server, self.inport, self.fromaddress, msg["to"], msg["cc"], msg["subject"],
+                     attach_names),
+                      e
+                  )
+                retry += 1
+                time.sleep(2 + retry)
+
 
 def sendEmail(addresses, content, mail_title, attach, cc=[]):
     """
@@ -108,7 +189,7 @@ def sendEmail(addresses, content, mail_title, attach, cc=[]):
 
     # send
     retry = 0
-    while retry < 5:
+    while retry < 3:
         try:
             smtp = SMTP_SSL(host_server)
             smtp.set_debuglevel(0)
@@ -216,7 +297,7 @@ def receiveEmail3(**kwargs):
         return res
 
 if __name__ == '__main__':
-    addresses = ["iamnushead@gmail.com"]
+    addresses = ["zhangyc@neeq.com.cn"]
     cc = []
     Subject = 'Python自动发送的邮件'  # 邮件标题
     content = "您好，这是使用python登录邮箱发送邮件的测试"
@@ -226,12 +307,17 @@ if __name__ == '__main__':
             "filepath": "/Users/madgd/Downloads/test3/testdoc.docx",
         },
     ]
-    # sendEmail(addresses, content, Subject, attach, cc)
+    # for i in range(50):
+    #     sendEmail(addresses, content, Subject, attach, cc)
+
+    sender = EmailSender()
+    for i in range(10):
+        sender.sendEmail(addresses, content, Subject, attach, cc)
     # receiveEmail()
     # receiveEmail2()
-    res = receiveEmail3(uid__range='1598510969:*')
-    for uid, message in res:
-        print(uid)
-        print(message.sent_from)
-        for attach in message.attachments:
-            print(attach['filename'])
+    # res = receiveEmail3(uid__range='1598510969:*')
+    # for uid, message in res:
+    #     print(uid)
+    #     print(message.sent_from)
+    #     for attach in message.attachments:
+    #         print(attach['filename'])

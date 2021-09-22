@@ -44,7 +44,7 @@ CREATE table contacts(
    id INTEGER PRIMARY KEY AUTOINCREMENT,
    name CHAR(255),
    type CHAR(100),
-   related_id INT,
+   related_id INT NOT NULL,
    position CHAR(255),
    prime INT,
    phone CHAR(20),

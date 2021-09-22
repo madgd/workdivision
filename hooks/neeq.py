@@ -162,10 +162,10 @@ def parse_contacts(file):
     allRows = sheet1.rows
     next(allRows) # skip header
     for row in allRows:
-        print(row[0].value)
         name = row[3].value
-        if not name:
+        if row[0].value is None or not name:
             continue
+        print(row[0].value)
         client_group_name = row[0].value
         client_group_fullname = row[1].value
         staff_name = row[2].value
@@ -186,15 +186,20 @@ def parse_contacts(file):
         tele = row[7].value
         wechat = row[8].value
         prime = 1
+        # check client_group exist 
+        sql = "SELECT id from client_group where name = '%s'" % client_group_name
+        print(sql)
+        cursor = c.execute(sql)
         # in case of duplicate names
-        c.execute("insert or replace into contacts (id, name, type, related_id, position, prime,\
-                    phone, tele, email, wechat) values (\
-                    (select id from contacts where name = ? and related_id = (select id from client_group where name = ? and staff_name = ?)), ?, ?,\
-                    (select id from client_group where name = ? and staff_name = ?), ?, ?, ?, ?, ?, ?)",
-                  (name, client_group_name, staff_name, name, type, client_group_name, staff_name, position, prime,\
-                   phone, tele, email, wechat)
-                 )
-        res = conn.commit()
+        if len(list(cursor)):
+            c.execute("insert or replace into contacts (id, name, type, related_id, position, prime,\
+                        phone, tele, email, wechat) values (\
+                        (select id from contacts where name = ? and related_id = (select id from client_group where name = ?)), ?, ?,\
+                        (select id from client_group where name = ?), ?, ?, ?, ?, ?, ?)",
+                      (name, client_group_name, name, type, client_group_name, position, prime,\
+                       phone, tele, email, wechat)
+                     )
+            res = conn.commit()
 
     # sheet2
     sheet2 = wb["监管员联系方式"]
@@ -209,11 +214,17 @@ def parse_contacts(file):
         prime = 1
         position = ""
         type = "staff"
-        c.execute("insert or replace into contacts (id, name, type, related_id, position, prime,\
-                    phone, tele, email, wechat) values (\
-                    (select id from contacts where name = ?), ?, ?,\
-                    (select id from staff where name = ?), ?, ?, ?, ?, ?, ?)",
-                  (name, name, type, name, position, prime,\
-                   phone, tele, email, wechat)
-                 )
-        conn.commit()
+        # check client_group exist 
+        sql = "SELECT id from staff where name = '%s'" % name
+        print(sql)
+        cursor = c.execute(sql)
+        # in case of duplicate names
+        if len(list(cursor)):
+            c.execute("insert or replace into contacts (id, name, type, related_id, position, prime,\
+                        phone, tele, email, wechat) values (\
+                        (select id from contacts where name = ?), ?, ?,\
+                        (select id from staff where name = ?), ?, ?, ?, ?, ?, ?)",
+                      (name, name, type, name, position, prime,\
+                       phone, tele, email, wechat)
+                     )
+            conn.commit()

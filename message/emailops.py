@@ -128,15 +128,29 @@ class EmailSender:
                   % (f"{datetime.datetime.now():%Y-%m-%d %H:%M:%S}", retry, self.host_server, self.inport, self.fromaddress, msg["to"], msg["cc"], msg["subject"],
                      attach_names)
                   )
-                break
+                return True
             except Exception as e:
                 print("[emailops][email send failed][tm=%s][retry=%d]host:%s, port:%s, from:%s, to:%s, cc:%s, subject:%s, attach:%s, err:"
                   % (f"{datetime.datetime.now():%Y-%m-%d %H:%M:%S}", retry,  self.host_server, self.inport, self.fromaddress, msg["to"], msg["cc"], msg["subject"],
                      attach_names),
                       e
                   )
+                try:
+                    # deal 421 too many commands
+                    code = e.args[0]
+                    if code == 421:
+                        self.smtp.connect(self.host_server)
+                except:
+                    # tricky solution
+                    try:
+                        self.smtp.connect(self.host_server)
+                    except:
+                        pass
+
                 retry += 1
                 time.sleep(2 + retry)
+
+        return False
 
 
 def sendEmail(addresses, content, mail_title, attach, cc=[]):
@@ -315,7 +329,7 @@ if __name__ == '__main__':
         sender.sendEmail(addresses, content, Subject, attach, cc)
     # receiveEmail()
     # receiveEmail2()
-    # res = receiveEmail3(uid__range='1598510969:*')
+    # res = receiveEmail3(uid__range='1577703015:*')
     # for uid, message in res:
     #     print(uid)
     #     print(message.sent_from)

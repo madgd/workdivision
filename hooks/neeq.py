@@ -181,7 +181,7 @@ def parse_contacts(file):
         #     type = "staff"
 
         position = row[4].value
-        email = row[5].value
+        email = row[5].value.lower()
         phone = row[6].value
         tele = row[7].value
         wechat = row[8].value
@@ -209,7 +209,7 @@ def parse_contacts(file):
         name = row[0].value
         phone = row[1].value
         tele = row[2].value
-        email = row[3].value
+        email = row[3].value.lower()
         wechat = row[4].value
         prime = 1
         position = ""

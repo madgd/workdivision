@@ -68,13 +68,13 @@ class EmailSender:
         config.read(EmailConfig)
         self.host_server = config.get(ConfigSec, "host_server")
         self.fromaddress = config.get(ConfigSec, "fromaddress")
-        password = config.get(ConfigSec, "password")
+        self.password = config.get(ConfigSec, "password")
         self.inport = config.get(ConfigSec, "inport")
         try:
             self.smtp = SMTP_SSL(self.host_server)
             self.smtp.set_debuglevel(0)
             self.smtp.ehlo(self.host_server)
-            self.smtp.login(self.fromaddress, password)
+            self.smtp.login(self.fromaddress, self.password)
         except Exception as e:
             print("[emailops][email sender init failed][tm=%s]e:%s" % (f"{datetime.datetime.now():%Y-%m-%d %H:%M:%S}", e))
 
@@ -137,14 +137,28 @@ class EmailSender:
                   )
                 try:
                     # deal 421 too many commands
+                    # extract err code
                     code = e.args[0]
+                    if type(code) == dict:
+                        code = list(code.values()).pop()[0]
+                    elif type(code) == tuple:
+                        code = code[0]
+                    print("[emailops][email send failed][errcode=%d]" % code)
                     if code == 421:
+                        print("[emailops][email send failed][try reconnect]")
                         self.smtp.connect(self.host_server)
-                except:
+                        self.smtp.ehlo(self.host_server)
+                        self.smtp.login(self.fromaddress, self.password)
+                except Exception as e2:
+                    print("[emailops][email send failed][errcode decode err]", e2)
                     # tricky solution
                     try:
+                        print("try reconnect")
                         self.smtp.connect(self.host_server)
-                    except:
+                        self.smtp.ehlo(self.host_server)
+                        self.smtp.login(self.fromaddress, self.password)
+                    except Exception as e3:
+                        print("[emailops][email send failed][reconnect err]", e3)
                         pass
 
                 retry += 1
@@ -325,8 +339,9 @@ if __name__ == '__main__':
     #     sendEmail(addresses, content, Subject, attach, cc)
 
     sender = EmailSender()
-    for i in range(10):
+    for i in range(200):
         sender.sendEmail(addresses, content, Subject, attach, cc)
+        time.sleep(1)
     # receiveEmail()
     # receiveEmail2()
     # res = receiveEmail3(uid__range='1577703015:*')
